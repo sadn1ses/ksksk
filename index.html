@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FicRoom — AI для историй</title>
+<style>
+:root{--bg:#0d0d12;--panel:#171720;--panel2:#20202b;--text:#f4f4f7;--muted:#9b9baa;--accent:#a78bfa;--accent2:#7c3aed;--border:#2b2b38}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0%,#241b3d 0,#0d0d12 38%);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,sans-serif;height:100vh;overflow:hidden}
+.app{display:grid;grid-template-columns:250px 1fr;height:100vh}.side{background:#111118;border-right:1px solid var(--border);padding:18px;display:flex;flex-direction:column;gap:14px}.logo{font-size:22px;font-weight:800}.logo span{color:var(--accent)}
+button{border:0;border-radius:11px;padding:10px 13px;background:var(--panel2);color:var(--text);cursor:pointer;font-weight:650}button:hover{filter:brightness(1.15)}.new{background:linear-gradient(135deg,var(--accent2),var(--accent));color:white;width:100%}
+.hint{color:var(--muted);font-size:12px;line-height:1.45;margin-top:auto}.main{display:flex;flex-direction:column;min-width:0}.top{height:62px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 22px}.title{font-weight:750}.mode{color:var(--muted);font-size:12px}
+.chat{flex:1;overflow:auto;padding:28px max(18px,calc((100vw - 900px)/2));display:flex;flex-direction:column;gap:18px}.welcome{margin:auto;text-align:center;max-width:650px}.welcome h1{font-size:38px;margin:0 0 8px}.welcome p{color:var(--muted);font-size:16px}.examples{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:20px}.examples button{border:1px solid var(--border);font-weight:500}
+.msg{display:flex;gap:12px;max-width:850px}.msg.user{margin-left:auto;flex-direction:row-reverse}.avatar{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--panel2);flex:none}.user .avatar{background:var(--accent2)}.bubble{background:var(--panel);border:1px solid var(--border);padding:13px 15px;border-radius:14px;line-height:1.55;white-space:pre-wrap}.user .bubble{background:#30205a;border-color:#49348a}
+.composer{border-top:1px solid var(--border);padding:14px max(18px,calc((100vw - 900px)/2));background:rgba(13,13,18,.94)}.row{display:flex;gap:8px}.row textarea{flex:1;resize:none;min-height:50px;max-height:180px;background:var(--panel);border:1px solid var(--border);border-radius:14px;color:var(--text);padding:13px;font:inherit;outline:none}.row textarea:focus{border-color:var(--accent)}.send{background:var(--accent2);min-width:82px}.settings{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.settings select,.settings input{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px}
+@media(max-width:700px){.app{grid-template-columns:1fr}.side{display:none}.welcome h1{font-size:30px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="logo">Fic<span>Room</span></div>
+  <button class="new" id="newBtn">＋ Новая история</button>
+  <button id="clearBtn">Очистить чат</button>
+  <div class="hint">ИИ помогает писать фанфики, АУ, диалоги и ролевые сцены. Не вводи личные данные или секреты.</div>
+</aside>
+<main class="main">
+  <header class="top"><div class="title">AI Story Room</div><div class="mode">Творческий режим</div></header>
+  <section class="chat" id="chat">
+    <div class="welcome" id="welcome">
+      <h1>Что будем писать?</h1>
+      <p>Задай фандом, персонажей, АУ, стиль или просто начни сцену.</p>
+      <div class="examples">
+        <button>Придумай АУ для двух персонажей</button>
+        <button>Начни сцену в академии</button>
+        <button>Сделай анкету персонажа</button>
+      </div>
+    </div>
+  </section>
+  <footer class="composer">
+    <div class="row">
+      <textarea id="input" placeholder="Напиши, что происходит..."></textarea>
+      <button class="send" id="send">Отправить</button>
+    </div>
+    <div class="settings">
+      <select id="type"><option value="story">Фанфик / история</option><option value="au">АУ</option><option value="rp">Ролевая сцена</option><option value="idea">Идеи</option></select>
+      <select id="length"><option value="short">Коротко</option><option value="medium" selected>Средне</option><option value="long">Подробно</option></select>
+    </div>
+  </footer>
+</main>
+</div>
+<script>
+const chat=document.getElementById('chat'), input=document.getElementById('input'), send=document.getElementById('send');
+const type=document.getElementById('type'), length=document.getElementById('length');
+let messages=[];
+
+function add(role,text){
+  document.getElementById('welcome')?.remove();
+  const el=document.createElement('div'); el.className='msg '+role;
+  el.innerHTML='<div class="avatar">'+(role==='user'?'Я':'AI')+'</div><div class="bubble"></div>';
+  el.querySelector('.bubble').textContent=text; chat.appendChild(el); chat.scrollTop=chat.scrollHeight;
+}
+function reset(){messages=[]; chat.innerHTML='<div class="welcome" id="welcome"><h1>Что будем писать?</h1><p>Задай фандом, персонажей, АУ, стиль или просто начни сцену.</p></div>'}
+document.getElementById('newBtn').onclick=reset;
+document.getElementById('clearBtn').onclick=reset;
+document.querySelectorAll('.examples button').forEach(b=>b.onclick=()=>{input.value=b.textContent; input.focus()});
+
+async function run(){
+ const text=input.value.trim(); if(!text||send.disabled)return;
+ input.value=''; add('user',text); messages.push({role:'user',content:text});
+ send.disabled=true; send.textContent='...';
+ const loading='AI печатает…'; add('assistant',loading);
+ const bubble=chat.lastElementChild.querySelector('.bubble');
+ try{
+   const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+     messages, type:type.value, length:length.value
+   })});
+   const data=await r.json();
+   if(!r.ok) throw new Error(data.error||'Ошибка запроса');
+   bubble.textContent=data.text; messages.push({role:'assistant',content:data.text});
+ }catch(e){bubble.textContent='Не получилось получить ответ: '+e.message}
+ finally{send.disabled=false;send.textContent='Отправить';chat.scrollTop=chat.scrollHeight}
+}
+send.onclick=run;
+input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();run()}});
+</script>
+</body>
+</html>
